@@ -20,12 +20,14 @@ class TemporaryAccessKey extends Model
         'expires_at',
         'accessible_id',
         'accessible_type',
-        'settings'
+        'settings',
+        'scopes'
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
-        'settings' => 'array'
+        'settings' => 'array',
+        'scopes' => 'array'
     ];
 
     public function accessible(): MorphTo

@@ -5,7 +5,7 @@ namespace Kakaprodo\PresignedAction\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
-use PresignedActionException;
+use Kakaprodo\PresignedAction\Exceptions\PresignedActionException;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 

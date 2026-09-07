@@ -17,6 +17,11 @@
             "Kakaprodo\\PresignedAction\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "kakaprodo",
@@ -29,10 +34,16 @@
         "laravel/framework": ">=8.0",
         "kakaprodo/custom-data":">=2.3.5 || dev-develop"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
      "extra": {
         "laravel": {
             "providers": [
-                "Kakaprodo\\PresignedAction\\PresignedActionProvider"
+                "Kakaprodo\\PresignedAction\\PresignedActionServiceProvider"
             ]
         }
     }

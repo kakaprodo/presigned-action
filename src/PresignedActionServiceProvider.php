@@ -3,6 +3,9 @@
 namespace Kakaprodo\PresignedAction;
 
 use Illuminate\Support\ServiceProvider;
+use Kakaprodo\PresignedAction\Console\GenerateTemporaryAccessKeyCommand;
+
+use Kakaprodo\PresignedAction\PresignedActionGate;
 
 class PresignedActionServiceProvider extends ServiceProvider
 {
@@ -35,7 +38,13 @@ class PresignedActionServiceProvider extends ServiceProvider
     {
         if (!$this->app->runningInConsole()) return;
 
-        $this->commands([]);
+        $this->app->singleton(PresignedActionGate::class, function () {
+            return new PresignedActionGate();
+        });
+
+        $this->commands([
+            GenerateTemporaryAccessKeyCommand::class,
+        ]);
     }
 
 
@@ -44,5 +53,9 @@ class PresignedActionServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__ . '/config/presigned-action.php' => config_path('presigned-action.php'),
         ], 'config-presigned-action');
+
+        if (config('presigned-action.should_run_migration', true)) {
+            $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
+        }
     }
 }
