@@ -5,7 +5,7 @@ namespace Kakaprodo\PresignedAction;
 use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
 use Kakaprodo\PresignedAction\Support\Actions\GenerateTemporaryAccessKeyAction;
 
-class PresignedAction
+class PresignedActionGate
 {
 
     /**
@@ -15,12 +15,22 @@ class PresignedAction
      *   accessible: \Illuminate\Database\Eloquent\Model,
      *   whoami: string,
      *   expires_at: null|\Illuminate\Support\Carbon,
-     *   settings: array|null
+     *   settings: array|null,
+     *   scopes: array|null,
      * } $options
      * 
      */
     public function generateAccessKey(array $options): TemporaryAccessKey
     {
         return GenerateTemporaryAccessKeyAction::process($options);
+    }
+
+    /**
+     * Get the temporary access key model from the one loaded on the
+     * request after middleware check has passed.
+     */
+    public function temporaryAccessKey(): ?TemporaryAccessKey
+    {
+        return request()?->temporaryAccessKey();
     }
 }

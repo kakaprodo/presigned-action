@@ -32,13 +32,17 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
             return $accessKey;
         }
 
-        $uuid = ((string) Str::uuid7()) . '' . $accessibleId;
+        $uuid = ((string) Str::uuid()) . '' . $accessibleId;
 
         // When access key is expired , update its uuid, then extends its validity period
         if ($accessKey) {
             $accessKey->update([
                 'uuid' => $uuid,
                 'expires_at' => $data->expires_at,
+                'scopes' => [
+                    ...($accessKey->scopes ?? []),
+                    ...($data->scopes ?? [])
+                ],
             ]);
 
             return $accessKey->refresh();
@@ -50,7 +54,8 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
             'expires_at' => $data->expires_at ?? now()->addMinutes($expireAfterMinutes),
             'accessible_id' => $accessibleId,
             'accessible_type' => $accessibleClass,
-            'settings' => $data->settings
+            'settings' => $data->settings,
+            'scopes' => $data->scopes
         ]);
     }
 }
