@@ -1,0 +1,39 @@
+{
+    "name": "kakaprodo/presigned-action",
+    "description": "A Laravel package for securely presigning actions on any entity, enabling controlled access and authorization without requiring users to share their passwords.",
+    "license": "MIT",
+    "keywords": [
+        "package",
+        "security",
+        "analytic",
+        "secure third-party endpoint",
+        "php",
+        "kakaprodo",
+        "promesse kayenga",
+        "laravel"
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kakaprodo\\PresignedAction\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "kakaprodo",
+            "email": "promskakaprodo45@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=8.0",
+        "laravel/framework": ">=8.0",
+        "kakaprodo/custom-data":">=2.3.5 || dev-develop"
+    },
+     "extra": {
+        "laravel": {
+            "providers": [
+                "Kakaprodo\\PresignedAction\\PresignedActionProvider"
+            ]
+        }
+    }
+}
