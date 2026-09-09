@@ -55,7 +55,7 @@ class VerifyAccessKeyMiddleware
         }
 
 
-        if ($accessKey->whoami !== $whoAmiValue) {
+        if (! $accessKey->revalidateWhoami($whoAmiValue)) {
             $this->fireError('Unauthorized - wrong identifier');
         }
 

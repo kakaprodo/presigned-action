@@ -21,18 +21,49 @@ class TemporaryAccessKey extends Model
         'accessible_id',
         'accessible_type',
         'settings',
-        'scopes'
+        'scopes',
+        'permissions',
+        'origin',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'settings' => 'array',
-        'scopes' => 'array'
+        'scopes' => 'array',
+        'permissions' => 'array'
     ];
 
     public function accessible(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Verify that the key was issued for the given identity.
+     * */
+    public function revalidateWhoami(mixed $whoami): bool
+    {
+        return $this->whoami === $whoami;
+    }
+
+    /**
+     * Check if a given accessible model matches with the one set  */
+    public function revalidateAccessible(Model $accessible): bool
+    {
+        return (string) $this->accessible_id === (string) $accessible->getKey()
+            && $this->accessible_type === get_class($accessible);
+    }
+
+    /** Determine whether at least one requested scope is granted. */
+    public function hasScope(array $scopes): bool
+    {
+        return collect($scopes)->intersect($this->scopes ?? [])->isNotEmpty();
+    }
+
+    /** Determine whether at least one requested permission is granted. */
+    public function hasPermission(array $permissions): bool
+    {
+        return collect($permissions)->intersect($this->permissions ?? [])->isNotEmpty();
     }
 
     /**

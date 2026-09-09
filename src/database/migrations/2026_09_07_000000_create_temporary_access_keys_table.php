@@ -16,6 +16,8 @@ return new class extends Migration
             $table->morphs('accessible');
             $table->json('settings')->nullable();
             $table->json('scopes')->nullable();
+            $table->json('permissions')->nullable();
+            $table->string('origin')->nullable();
             $table->timestamps();
 
             $table->index(['accessible_type', 'accessible_id', 'whoami'], 'presigned-action-unique');

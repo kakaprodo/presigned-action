@@ -34,7 +34,7 @@ class PresignedActionScopeMiddleware
 
         if ($requiredScopes->isEmpty())  return $next($request);
 
-        if ($requiredScopes->intersect($temporaryAccessKey->scopes ?? [])->isEmpty()) {
+        if (! $temporaryAccessKey->hasScope($requiredScopes->all())) {
             $this->fireError('Unauthorized - insufficient scope');
         }
 

@@ -1,24 +1,61 @@
 # Presigned Action
 
-A Laravel package for securely presigning actions on any entity, enabling controlled access and authorization without requiring users to share their passwords.
+Presigned Action is a Laravel package for securely authorizing actions on an
+Eloquent model without requiring the requesting person or service to have a
+local user account.
+
+It is useful when one service authenticates a user and another service owns the
+resource being accessed.
+
+## Installation
+
+```bash
+composer require kakaprodo/presigned-action
+```
+
+The package registers its service provider through Laravel package discovery.
+By default, its migrations are loaded automatically. Publish the configuration
+with:
+
+```bash
+php artisan vendor:publish --tag=config-presigned-action
+```
+
+## Generate an access key
+
+Use the facade with an accessible Eloquent model:
 
 ```php
 use Kakaprodo\PresignedAction\Facades\PresignedAction;
 
 $accessKey = PresignedAction::generateAccessKey([
-	'accessible' => $order,
-	'whoami' => 'partner-42',
+    'accessible' => $order,
+    'whoami' => 'partner-42',
     'expires_at' => now()->addHour(),
-	'scopes' => ['orders.read', 'orders.download'],
-	'settings' => [
-		'source' => 'partner-api',
-	],
+    'origin' => 'partner-api',
+    'scopes' => ['orders.read', 'orders.download'],
+    'permissions' => ['orders.view'],
+    'settings' => [
+        'source' => 'partner-api',
+    ],
 ]);
 
 return response()->json($accessKey->formatPublicTempKey());
 ```
 
-And here is the output
+The generation options are:
+
+| Option        | Required | Description                                                                 |
+| ------------- | -------- | --------------------------------------------------------------------------- |
+| `accessible`  | Yes      | Eloquent model the key grants access to.                                    |
+| `whoami`      | Yes      | Identifier of the person or service receiving access.                       |
+| `expires_at`  | No       | A Carbon expiration time. Defaults to `key_expires_after` minutes from now. |
+| `origin`      | No       | Identifies the system or integration that generated the key.                |
+| `scopes`      | No       | Array of scope names granted to the key.                                    |
+| `permissions` | No       | Array of permission names granted to the key.                               |
+| `settings`    | No       | Additional application-specific JSON data.                                  |
+
+The public response contains an encrypted key and its expiration timestamp:
 
 ```json
 {
@@ -27,12 +64,104 @@ And here is the output
 }
 ```
 
-**Why Presigned Action?**
+## Key reuse and renewal
 
-In a microservice architecture, a user may be authenticated and authorized by a Core service while the entity she/he needs to access belongs to another service.
+When generating a key, the package looks for an existing key with the same
+accessible model, `whoami`, and `origin`. It reuses that key only when its
+`scopes` and `permissions` also match.
 
-For example, a user in a Core service may be authorized to perform an action on a Shop managed by another service. The user should be able to perform that action without having a user account in the Shop service.
+- An unexpired key with matching values is returned unchanged.
+- An expired key with matching values is renewed with a new UUID and expiration.
+- A key with different scopes, permissions, or origin produces a new record.
 
-Presigned Action provides a way to authorize this cross-service access without duplicating users, roles, or permissions across services.
+Scopes and permissions are treated as unordered values when comparing keys.
 
-[Official Doc On Yupidoc](https://yupidoc.com/docs/presigned-action)
+## Validate incoming requests
+
+Apply `VerifyAccessKeyMiddleware` to routes that require a valid access key:
+
+```php
+use Kakaprodo\PresignedAction\Middleware\VerifyAccessKeyMiddleware;
+
+Route::middleware(VerifyAccessKeyMiddleware::class)
+    ->get('/orders/{order}', ...);
+```
+
+The middleware expects these headers by default:
+
+```text
+X-TEMP-ACCESS-KEY: <encrypted temp_access_key>
+X-WHOMAI: partner-42
+```
+
+The verified model is available from the facade or the request:
+
+```php
+$accessKey = PresignedAction::temporaryAccessKey();
+// or
+$accessKey = request()->temporaryAccessKey();
+```
+
+Configure different header names in `config/presigned-action.php` under
+`access_key_validation`.
+
+## Scopes and permissions
+
+Use `PresignedActionScopeMiddleware` to require one or more scopes. Scope
+arguments may be comma- or pipe-separated:
+
+```php
+Route::middleware([
+    VerifyAccessKeyMiddleware::class,
+    PresignedActionScopeMiddleware::class . ':orders.read,orders.download',
+])->get('/orders/{order}/download', ...);
+```
+
+The middleware allows the request when at least one requested scope is granted.
+The access key model also provides helpers for application-level checks:
+
+```php
+$accessKey->hasScope(['orders.read']);
+$accessKey->hasPermission(['orders.view']);
+
+$accessKey->revalidateAccissible($order);
+$accessKey->revalidateWhoami('partner-42');
+```
+
+## Artisan command
+
+Generate a key interactively with:
+
+```bash
+php artisan presigned-action:generate partner-42 \
+    --accessible-id=123 \
+    --accessible-type="App\\Models\\Order" \
+    --scopes=orders.read \
+    --scopes=orders.download
+```
+
+## Configuration
+
+```php
+return [
+    'should_run_migration' => true,
+    'key_expires_after' => 3600,
+    'access_key_validation' => [
+        'whoami' => 'X-WHOMAI',
+        'temp_access_key' => 'X-TEMP-ACCESS-KEY',
+    ],
+];
+```
+
+`key_expires_after` is expressed in minutes. The database migration creates the
+`temporary_access_keys` table with nullable JSON `permissions` and nullable
+string `origin` columns.
+
+## Why Presigned Action?
+
+In a microservice architecture, a user may be authenticated and authorized by
+a core service while the entity they need to access belongs to another service.
+Presigned Action provides controlled cross-service access without duplicating
+users, roles, or permissions across services.
+
+[Official documentation on Yupidoc](https://yupidoc.com/docs/presigned-action)
