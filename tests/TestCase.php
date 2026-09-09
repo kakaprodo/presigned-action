@@ -61,6 +61,8 @@ abstract class TestCase extends BaseTestCase
             $table->unsignedBigInteger('accessible_id');
             $table->json('settings')->nullable();
             $table->json('scopes')->nullable();
+            $table->json('permissions')->nullable();
+            $table->string('origin')->nullable();
             $table->timestamps();
         });
     }

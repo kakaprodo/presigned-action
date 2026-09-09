@@ -11,14 +11,16 @@ class PresignedActionGate
     /**
      * Generate a temporary access key
      * 
-     * @property array{
+     * @param array{
      *   accessible: \Illuminate\Database\Eloquent\Model,
      *   whoami: string,
      *   expires_at: null|\Illuminate\Support\Carbon,
      *   settings: array|null,
      *   scopes: array|null,
+     *   permissions: array|null,
+     *   origin: string|null,
      * } $options
-     * 
+     * @return TemporaryAccessKey
      */
     public function generateAccessKey(array $options): TemporaryAccessKey
     {

@@ -22,31 +22,32 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
             ->where('accessible_id', $accessibleId)
             ->where('accessible_type', $accessibleClass)
             ->where('whoami', $data->whoami)
+            ->when($data->origin === null,
+                fn($query) => $query->whereNull('origin'),
+                fn($query) => $query->where('origin', $data->origin)
+            )
             ->first();
 
-        if (
-            $accessKey
-            && $accessKey?->expires_at?->isFuture()
-            && $accessKey?->expires_at?->isAfter(now()->addMinutes($expireAfterMinutes / 4))
-        ) {
-            return $accessKey;
-        }
+        if ($data->accessKeyIsGeneratedWithSameValues($accessKey)) {
+            if ($accessKey->expires_at?->isFuture()) {
+                return $accessKey;
+            }
 
-        $uuid = ((string) Str::uuid()) . '' . $accessibleId;
+            $uuid = ((string) Str::uuid()) . '' . $accessibleId;
 
-        // When access key is expired , update its uuid, then extends its validity period
-        if ($accessKey) {
             $accessKey->update([
                 'uuid' => $uuid,
-                'expires_at' => $data->expires_at,
-                'scopes' => [
-                    ...($accessKey->scopes ?? []),
-                    ...($data->scopes ?? [])
-                ],
+                'expires_at' => $data->expires_at ?? now()->addMinutes($expireAfterMinutes),
+                'settings' => $data->settings,
+                'scopes' => $data->scopes,
+                'permissions' => $data->permissions,
+                'origin' => $data->origin,
             ]);
 
             return $accessKey->refresh();
         }
+
+        $uuid = ((string) Str::uuid()) . '' . $accessibleId;
 
         return TemporaryAccessKey::create([
             'uuid' => $uuid,
@@ -55,7 +56,9 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
             'accessible_id' => $accessibleId,
             'accessible_type' => $accessibleClass,
             'settings' => $data->settings,
-            'scopes' => $data->scopes
+            'scopes' => $data->scopes,
+            'permissions' => $data->permissions,
+            'origin' => $data->origin,
         ]);
     }
 }
