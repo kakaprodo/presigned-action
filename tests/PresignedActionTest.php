@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Kakaprodo\PresignedAction\Facades\PresignedAction;
 use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
-use Kakaprodo\PresignedAction\Support\Data\GenerateTemporaryAccessKeyData;
 
 class PresignedActionTest extends TestCase
 {
@@ -67,7 +66,7 @@ class PresignedActionTest extends TestCase
         $this->assertSame(2, TemporaryAccessKey::query()->count());
     }
 
-    public function test_it_updates_an_expired_key_when_values_match(): void
+    public function test_it_creates_a_new_key_when_the_previous_matching_key_is_expired(): void
     {
         $accessible = AccessibleModel::create();
         $options = [
@@ -83,33 +82,10 @@ class PresignedActionTest extends TestCase
         $first->update(['expires_at' => now()->subMinute()]);
         $renewed = PresignedAction::generateAccessKey($options);
 
-        $this->assertSame($first->id, $renewed->id);
+        $this->assertNotSame($first->id, $renewed->id);
         $this->assertNotSame($oldUuid, $renewed->uuid);
         $this->assertTrue($renewed->expires_at->isFuture());
-    }
-
-    public function test_data_can_compare_access_key_values(): void
-    {
-        $data = GenerateTemporaryAccessKeyData::make([
-            'accessible' => AccessibleModel::create(),
-            'whoami' => 'staff-1',
-            'origin' => 'partner-api',
-            'scopes' => ['orders.read', 'orders.write'],
-            'permissions' => ['orders.view'],
-        ]);
-
-        $accessKey = TemporaryAccessKey::create([
-            'uuid' => 'key-123',
-            'whoami' => 'staff-1',
-            'expires_at' => now()->addHour(),
-            'accessible_id' => 1,
-            'accessible_type' => AccessibleModel::class,
-            'origin' => 'partner-api',
-            'scopes' => ['orders.write', 'orders.read'],
-            'permissions' => ['orders.view'],
-        ]);
-
-        $this->assertTrue($data->accessKeyIsGeneratedWithSameValues($accessKey));
+        $this->assertSame(2, TemporaryAccessKey::query()->count());
     }
 
     public function test_access_key_revalidation_and_capability_helpers(): void
@@ -129,6 +105,7 @@ class PresignedActionTest extends TestCase
         $this->assertTrue($accessKey->revalidateWhoami('staff-1'));
         $this->assertTrue($accessKey->hasScope(['orders.read', 'orders.write']));
         $this->assertTrue($accessKey->hasPermission(['orders.view']));
+        $this->assertTrue($accessKey->can(['orders.view']));
         $this->assertFalse($accessKey->hasPermission(['orders.update']));
     }
 }

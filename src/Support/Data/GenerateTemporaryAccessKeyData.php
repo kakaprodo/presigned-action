@@ -5,7 +5,6 @@ namespace Kakaprodo\PresignedAction\Support\Data;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Kakaprodo\CustomData\CustomData;
-use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
 
 /**
  * @property Model $accessible Model that owns the temporary access key
@@ -31,27 +30,4 @@ class GenerateTemporaryAccessKeyData extends CustomData
         ];
     }
 
-    public function accessKeyIsGeneratedWithSameValues(?TemporaryAccessKey $existingAccessKey): bool
-    {
-        if (! $existingAccessKey) {
-            return false;
-        }
-
-        return $this->origin === $existingAccessKey->origin
-            && $this->sameValues($this->scopes ?? [], $existingAccessKey->scopes ?? [])
-            && $this->sameValues($this->permissions ?? [], $existingAccessKey->permissions ?? []);
-    }
-
-    private function sameValues(array $first, array $second): bool
-    {
-        $normalize = static function (array $values): array {
-            $values = array_map(static fn($value) => (string) $value, $values);
-            $values = array_values(array_unique($values));
-            sort($values);
-
-            return $values;
-        };
-
-        return $normalize($first) === $normalize($second);
-    }
 }

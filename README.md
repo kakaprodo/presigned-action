@@ -66,12 +66,12 @@ The public response contains an encrypted key and its expiration timestamp:
 
 ## Key reuse and renewal
 
-When generating a key, the package looks for an existing key with the same
-accessible model, `whoami`, and `origin`. It reuses that key only when its
-`scopes` and `permissions` also match.
+When generating a key, the package looks for an existing non-expired key with
+the same accessible model, `whoami`, and `origin`. It reuses that key only
+when its `scopes` and `permissions` also match.
 
 - An unexpired key with matching values is returned unchanged.
-- An expired key with matching values is renewed with a new UUID and expiration.
+- An expired key is ignored; a new key is created.
 - A key with different scopes, permissions, or origin produces a new record.
 
 Scopes and permissions are treated as unordered values when comparing keys.
@@ -123,9 +123,30 @@ The access key model also provides helpers for application-level checks:
 ```php
 $accessKey->hasScope(['orders.read']);
 $accessKey->hasPermission(['orders.view']);
+$accessKey->can(['orders.view']); // shortcut for hasPermission()
 
 $accessKey->revalidateAccissible($order);
 $accessKey->revalidateWhoami('partner-42');
+```
+
+Register the middleware aliases in your application's HTTP kernel:
+
+```php
+protected $middlewareAliases = [
+    'presigned-action.origin' => \Kakaprodo\PresignedAction\Middleware\PresignedActionOriginMiddleware::class,
+    'presigned-action.permission' => \Kakaprodo\PresignedAction\Middleware\PresignedActionPermissionMiddleware::class,
+    'presigned-action.scope' => \Kakaprodo\PresignedAction\Middleware\PresignedActionScopeMiddleware::class,
+];
+```
+
+Then require an origin or permission on a route:
+
+```php
+Route::middleware([
+    VerifyAccessKeyMiddleware::class,
+    'presigned-action.origin:partner-api',
+    'presigned-action.permission:orders.view',
+])->get('/orders', ...);
 ```
 
 ## Artisan command
@@ -138,6 +159,48 @@ php artisan presigned-action:generate partner-42 \
     --accessible-type="App\\Models\\Order" \
     --scopes=orders.read \
     --scopes=orders.download
+```
+
+Remove expired keys with:
+
+```bash
+php artisan presigned-action:purge-expired
+```
+
+## Custom validators
+
+Validators can be registered from any service provider and are called with the
+current temporary access key as their first argument:
+
+```php
+use Kakaprodo\PresignedAction\Facades\PresignedAction;
+use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
+
+PresignedAction::validator()->register('orders', [
+    'owns' => fn (TemporaryAccessKey $accessKey, $orderId) => $accessKey->whoami === $orderId,
+]);
+
+PresignedAction::validator()->register('simple', fn (TemporaryAccessKey $accessKey, $value) => $value !== null);
+
+```
+
+You can call a given validator using the `check` method:
+
+```php
+PresignedAction::validator()->check('orders.owns', [$orderId]);
+PresignedAction::validator()->check('simple', [$value]);
+```
+
+If a validator returns `false`, `check()` throws a `PresignedActionException`
+with `Permission denied` by default. Pass a third argument to customize the
+error message:
+
+```php
+PresignedAction::validator()->check(
+    'orders.owns',
+    [$orderId],
+    'This order is not accessible.',
+);
 ```
 
 ## Configuration

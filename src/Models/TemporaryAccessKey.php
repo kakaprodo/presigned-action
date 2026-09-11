@@ -66,6 +66,12 @@ class TemporaryAccessKey extends Model
         return collect($permissions)->intersect($this->permissions ?? [])->isNotEmpty();
     }
 
+    /** Determine whether at least one requested permission is granted. */
+    public function can(array $permissions): bool
+    {
+        return $this->hasPermission($permissions);
+    }
+
     /**
      * Return the encrypted public key used to authenticate the accessible model.
      */

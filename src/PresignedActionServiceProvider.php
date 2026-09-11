@@ -4,7 +4,7 @@ namespace Kakaprodo\PresignedAction;
 
 use Illuminate\Support\ServiceProvider;
 use Kakaprodo\PresignedAction\Console\GenerateTemporaryAccessKeyCommand;
-
+use Kakaprodo\PresignedAction\Console\PurgeExpiredTemporaryAccessKeysCommand;
 use Kakaprodo\PresignedAction\PresignedActionGate;
 
 class PresignedActionServiceProvider extends ServiceProvider
@@ -44,9 +44,9 @@ class PresignedActionServiceProvider extends ServiceProvider
 
         $this->commands([
             GenerateTemporaryAccessKeyCommand::class,
+            PurgeExpiredTemporaryAccessKeysCommand::class,
         ]);
     }
-
 
     public function stackToPublish()
     {
