@@ -4,6 +4,7 @@ namespace Kakaprodo\PresignedAction\Facades;
 
 use Illuminate\Support\Facades\Facade;
 use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
+use Kakaprodo\PresignedAction\Plugins\ActionValidator;
 use Kakaprodo\PresignedAction\PresignedActionGate;
 
 /**
@@ -17,9 +18,14 @@ use Kakaprodo\PresignedAction\PresignedActionGate;
  *     origin: string|null,
  * } $options)
  * @method static ?TemporaryAccessKey temporaryAccessKey()
+ * @method static ActionValidator validator()
  */
 class PresignedAction extends Facade
 {
+    public static function validator(): ActionValidator
+    {
+        return static::getFacadeRoot()->validator();
+    }
 
     protected static function getFacadeAccessor()
     {

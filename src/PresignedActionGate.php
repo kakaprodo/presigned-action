@@ -3,11 +3,11 @@
 namespace Kakaprodo\PresignedAction;
 
 use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
+use Kakaprodo\PresignedAction\Plugins\ActionValidator;
 use Kakaprodo\PresignedAction\Support\Actions\GenerateTemporaryAccessKeyAction;
 
 class PresignedActionGate
 {
-
     /**
      * Generate a temporary access key
      * 
@@ -34,5 +34,13 @@ class PresignedActionGate
     public function temporaryAccessKey(): ?TemporaryAccessKey
     {
         return request()?->temporaryAccessKey();
+    }
+
+    /**
+     * The action validator gate
+     */
+    public function validator(): ActionValidator
+    {
+        return new ActionValidator();
     }
 }

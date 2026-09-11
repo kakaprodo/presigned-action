@@ -9,7 +9,7 @@ return [
     /**
      * Number of minutes after which a generated access key expires.
      */
-    'key_expires_after' => 3600,
+    'key_expires_after' => 30,
 
     /**
      * Map TemporaryAccessKey attributes to request headers whose values
