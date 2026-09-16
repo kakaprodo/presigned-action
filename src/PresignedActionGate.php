@@ -2,6 +2,7 @@
 
 namespace Kakaprodo\PresignedAction;
 
+use Illuminate\Http\Request;
 use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
 use Kakaprodo\PresignedAction\Plugins\ActionValidator;
 use Kakaprodo\PresignedAction\Support\Actions\GenerateTemporaryAccessKeyAction;
@@ -33,7 +34,11 @@ class PresignedActionGate
      */
     public function temporaryAccessKey(): ?TemporaryAccessKey
     {
-        return request()?->temporaryAccessKey();
+        if (!Request::hasMacro('temporaryAccessKey')) {
+            return null;
+        }
+
+        return request()->temporaryAccessKey();
     }
 
     /**

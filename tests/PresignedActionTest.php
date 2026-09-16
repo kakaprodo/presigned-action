@@ -3,6 +3,7 @@
 namespace Tests;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Kakaprodo\PresignedAction\Facades\PresignedAction;
 use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
@@ -107,6 +108,19 @@ class PresignedActionTest extends TestCase
         $this->assertTrue($accessKey->hasPermission(['orders.view']));
         $this->assertTrue($accessKey->can(['orders.view']));
         $this->assertFalse($accessKey->hasPermission(['orders.update']));
+    }
+
+    public function test_it_returns_null_when_the_temporary_access_key_macro_is_not_registered(): void
+    {
+        $this->assertNull(PresignedAction::temporaryAccessKey());
+    }
+
+    public function test_it_returns_the_temporary_access_key_from_the_request_macro(): void
+    {
+        $accessKey = TemporaryAccessKey::make(['uuid' => 'key-123']);
+        Request::macro('temporaryAccessKey', fn() => $accessKey);
+
+        $this->assertSame($accessKey, PresignedAction::temporaryAccessKey());
     }
 }
 
