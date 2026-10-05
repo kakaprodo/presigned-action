@@ -57,8 +57,9 @@ abstract class TestCase extends BaseTestCase
             $table->string('uuid')->unique();
             $table->string('whoami');
             $table->timestamp('expires_at');
-            $table->string('accessible_type');
-            $table->unsignedBigInteger('accessible_id');
+            $table->string('accessible_type')->nullable();
+            $table->unsignedBigInteger('accessible_id')->nullable();
+            $table->boolean('is_independent')->default(false);
             $table->json('settings')->nullable();
             $table->json('scopes')->nullable();
             $table->json('permissions')->nullable();

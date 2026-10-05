@@ -19,7 +19,7 @@ return [
      * was defined
      */
     'access_key_validation' => [
-        'whoami' => 'X-WHOMAI',
+        'whoami' => 'X-WHOAMI',
 
         // the encrypted key string
         'temp_access_key' => 'X-TEMP-ACCESS-KEY'

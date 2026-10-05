@@ -47,6 +47,21 @@ class PresignedActionTest extends TestCase
         $this->assertSame(['orders.view'], $accessKey->permissions);
     }
 
+    public function test_it_generates_an_independent_temporary_access_key(): void
+    {
+        $accessKey = PresignedAction::generateAccessKey([
+            'whoami' => 'staff-1',
+        ]);
+
+        $this->assertTrue($accessKey->is_independent);
+        $this->assertNull($accessKey->accessible_id);
+        $this->assertNull($accessKey->accessible_type);
+        $this->assertSame(
+            "{$accessKey->uuid}-independent-{$accessKey->whoami}",
+            decrypt($accessKey->formatPublicTempKey()['temp_access_key'])
+        );
+    }
+
     public function test_it_reuses_only_an_unexpired_key_with_the_same_values(): void
     {
         $accessible = AccessibleModel::create();
