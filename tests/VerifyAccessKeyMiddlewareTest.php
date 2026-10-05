@@ -56,6 +56,24 @@ class VerifyAccessKeyMiddlewareTest extends TestCase
         (new VerifyAccessKeyMiddleware())->handle($request, fn() => new Response());
     }
 
+    public function test_it_allows_a_valid_independent_access_key(): void
+    {
+        $accessKey = TemporaryAccessKey::create([
+            'uuid' => 'independent-key-123',
+            'whoami' => 'staff-1',
+            'expires_at' => Carbon::tomorrow(),
+            'is_independent' => true,
+        ]);
+        $request = Request::create('/');
+        $request->headers->set('X-WHOMAI', 'staff-1');
+        $request->headers->set('X-TEMP-ACCESS-KEY', $accessKey->formatPublicTempKey()['temp_access_key']);
+
+        $response = (new VerifyAccessKeyMiddleware())->handle($request, fn() => new Response('ok'));
+
+        $this->assertSame('ok', $response->getContent());
+        $this->assertSame($accessKey->id, $request->temporaryAccessKey()->id);
+    }
+
     private function createAccessKey(?Carbon $expiresAt = null): TemporaryAccessKey
     {
         return TemporaryAccessKey::create([

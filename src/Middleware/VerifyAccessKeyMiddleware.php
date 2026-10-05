@@ -36,19 +36,29 @@ class VerifyAccessKeyMiddleware
             $this->fireError();
         }
 
-        // The decrypted key is: {uuid}-merchant-{accessible_id}::{accessible_type}.
-        if (! is_string($decryptedKey) || ! preg_match('/^(.+)-tempo-(\d+)::(.+)$/', $decryptedKey, $matches)) {
+        // The decrypted key is either:
+        // {uuid}-tempo-{accessible_id}::{accessible_type}
+        // or {uuid}-independent-{whoami}.
+        if (! is_string($decryptedKey)) {
             $this->fireError();
         }
 
-        [$uuid, $accessibleId, $accessibleType] = [$matches[1], (int) $matches[2], $matches[3]];
-
-        $accessKey = TemporaryAccessKey::query()
-            ->with('accessible')
-            ->where('uuid', $uuid)
-            ->where('accessible_id', $accessibleId)
-            ->where('accessible_type', $accessibleType)
-            ->first();
+        if (preg_match('/^(.+)-independent-(.+)$/', $decryptedKey, $matches)) {
+            $accessKey = TemporaryAccessKey::query()
+                ->where('uuid', $matches[1])
+                ->where('is_independent', true)
+                ->first();
+        } elseif (preg_match('/^(.+)-tempo-(\d+)::(.+)$/', $decryptedKey, $matches)) {
+            $accessKey = TemporaryAccessKey::query()
+                ->with('accessible')
+                ->where('uuid', $matches[1])
+                ->where('is_independent', false)
+                ->where('accessible_id', (int) $matches[2])
+                ->where('accessible_type', $matches[3])
+                ->first();
+        } else {
+            $this->fireError();
+        }
 
         if (! $accessKey) {
             $this->fireError();

@@ -20,6 +20,7 @@ class TemporaryAccessKey extends Model
         'expires_at',
         'accessible_id',
         'accessible_type',
+        'is_independent',
         'settings',
         'scopes',
         'permissions',
@@ -30,7 +31,8 @@ class TemporaryAccessKey extends Model
         'expires_at' => 'datetime',
         'settings' => 'array',
         'scopes' => 'array',
-        'permissions' => 'array'
+        'permissions' => 'array',
+        'is_independent' => 'boolean',
     ];
 
     public function accessible(): MorphTo
@@ -77,8 +79,12 @@ class TemporaryAccessKey extends Model
      */
     public function formatPublicTempKey(): array
     {
+        $publicKey = $this->is_independent
+            ? "{$this->uuid}-independent-{$this->whoami}"
+            : "{$this->uuid}-tempo-{$this->accessible_id}::{$this->accessible_type}";
+
         return [
-            'temp_access_key' => encrypt("{$this->uuid}-tempo-{$this->accessible_id}::{$this->accessible_type}"),
+            'temp_access_key' => encrypt($publicKey),
             'expires_at' => $this->expires_at->timestamp
         ];
     }
