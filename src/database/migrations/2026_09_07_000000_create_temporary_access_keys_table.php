@@ -11,9 +11,12 @@ return new class extends Migration
         Schema::create('temporary_access_keys', function (Blueprint $table): void {
             $table->id();
             $table->string('uuid')->unique();
+            $table->text('reference_text')->nullable();
             $table->string('whoami');
             $table->timestamp('expires_at');
-            $table->morphs('accessible');
+            $table->string('accessible_type')->nullable();
+            $table->unsignedBigInteger('accessible_id')->nullable();
+            $table->boolean('is_independent')->default(false);
             $table->json('settings')->nullable();
             $table->json('scopes')->nullable();
             $table->json('permissions')->nullable();

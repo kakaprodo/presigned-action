@@ -18,8 +18,6 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
         $accessibleClass = $data->accessible ? get_class($data->accessible) : null;
         $isIndependent = $data->accessible === null;
         $expireAfterMinutes = config('presigned-action.key_expires_after', 30);
-        $permissions = $data->permissions;
-        $scopes = $data->scopes;
 
         $accessKey = TemporaryAccessKey::query()
             ->where('is_independent', $isIndependent)
@@ -28,27 +26,8 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
                 fn($query) => $query->whereNull('accessible_id')->whereNull('accessible_type'),
                 fn($query) => $query->where('accessible_id', $accessibleId)->where('accessible_type', $accessibleClass)
             )
-            ->where('whoami', $data->whoami)
             ->where('expires_at', '>', now())
-            ->tap(function ($query) use ($permissions) {
-                $query->whereJsonLength('permissions', count($permissions));
-
-                foreach ($permissions as $permission) {
-                    $query->whereJsonContains('permissions', $permission);
-                }
-            })
-            ->tap(function ($query) use ($scopes) {
-                $query->whereJsonLength('scopes', count($scopes));
-
-                foreach ($scopes as $scope) {
-                    $query->whereJsonContains('scopes', $scope);
-                }
-            })
-            ->when(
-                $data->origin === null,
-                fn($query) => $query->whereNull('origin'),
-                fn($query) => $query->where('origin', $data->origin)
-            )
+            ->where('reference_text', $data->dataKey())
             ->first();
 
         if ($accessKey) {
@@ -59,9 +38,8 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
             $uuid = (string) Str::uuid() . (string) ($accessibleId ?? '');
 
             $accessKey->update([
-                'uuid' => $uuid,
-                'expires_at' => $data->expires_at ?? now()->addMinutes($expireAfterMinutes),
-                'settings' => $data->settings,
+                'uuid' => $uuid, // we always change the uuid because is part of the dynamic key to return in response of access key and we want it to always change
+                'expires_at' => $data->expires_at ?? now()->addMinutes($expireAfterMinutes)
             ]);
 
             return $accessKey->refresh();
@@ -71,6 +49,7 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
 
         return TemporaryAccessKey::create([
             'uuid' => $uuid,
+            'reference_text' => $data->dataKey(),
             'whoami' => $data->whoami,
             'expires_at' => $data->expires_at ?? now()->addMinutes($expireAfterMinutes),
             'accessible_id' => $accessibleId,

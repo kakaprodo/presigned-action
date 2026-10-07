@@ -13,6 +13,7 @@ use Kakaprodo\CustomData\CustomData;
  * @property array $scopes Scopes granted by the temporary access key
  * @property array $permissions Permissions granted by the temporary access key
  * @property null|string $origin Origin of the temporary access key
+ * @property bool $is_independent Whether the temporary access key is independent (not tied to a specific model)
  * 
  */
 class GenerateTemporaryAccessKeyData extends CustomData
@@ -26,8 +27,17 @@ class GenerateTemporaryAccessKeyData extends CustomData
             'settings?' => $this->property()->array([]),
             'scopes?' => $this->property()->array([]),
             'permissions?' => $this->property()->array([]),
-            'origin?' => $this->property()->string()
+            'origin?' => $this->property()->string(),
+            'is_independent?' => $this->property()->bool(false),
         ];
     }
 
+    public function ignoreForKeyGenerator(): array
+    {
+        return [
+            'accessible',
+            'expires_at',
+            'is_independent'
+        ];
+    }
 }
