@@ -55,6 +55,7 @@ abstract class TestCase extends BaseTestCase
         $schema->create('temporary_access_keys', function ($table): void {
             $table->id();
             $table->string('uuid')->unique();
+            $table->string('reference_text')->nullable();
             $table->string('whoami');
             $table->timestamp('expires_at');
             $table->string('accessible_type')->nullable();

@@ -16,6 +16,7 @@ class TemporaryAccessKey extends Model
 
     protected $fillable = [
         'uuid',
+        'reference_text',
         'whoami',
         'expires_at',
         'accessible_id',
