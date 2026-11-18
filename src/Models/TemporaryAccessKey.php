@@ -16,16 +16,24 @@ class TemporaryAccessKey extends Model
 
     protected $fillable = [
         'uuid',
+        'reference_text',
         'whoami',
         'expires_at',
         'accessible_id',
         'accessible_type',
-        'settings'
+        'is_independent',
+        'settings',
+        'scopes',
+        'permissions',
+        'origin',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
-        'settings' => 'array'
+        'settings' => 'array',
+        'scopes' => 'array',
+        'permissions' => 'array',
+        'is_independent' => 'boolean',
     ];
 
     public function accessible(): MorphTo
@@ -34,12 +42,50 @@ class TemporaryAccessKey extends Model
     }
 
     /**
+     * Verify that the key was issued for the given identity.
+     * */
+    public function revalidateWhoami(mixed $whoami): bool
+    {
+        return $this->whoami === $whoami;
+    }
+
+    /**
+     * Check if a given accessible model matches with the one set  */
+    public function revalidateAccessible(Model $accessible): bool
+    {
+        return (string) $this->accessible_id === (string) $accessible->getKey()
+            && $this->accessible_type === get_class($accessible);
+    }
+
+    /** Determine whether at least one requested scope is granted. */
+    public function hasScope(array $scopes): bool
+    {
+        return collect($scopes)->intersect($this->scopes ?? [])->isNotEmpty();
+    }
+
+    /** Determine whether at least one requested permission is granted. */
+    public function hasPermission(array $permissions): bool
+    {
+        return collect($permissions)->intersect($this->permissions ?? [])->isNotEmpty();
+    }
+
+    /** Determine whether at least one requested permission is granted. */
+    public function can(array $permissions): bool
+    {
+        return $this->hasPermission($permissions);
+    }
+
+    /**
      * Return the encrypted public key used to authenticate the accessible model.
      */
     public function formatPublicTempKey(): array
     {
+        $publicKey = $this->is_independent
+            ? "{$this->uuid}-independent-{$this->whoami}"
+            : "{$this->uuid}-tempo-{$this->accessible_id}::{$this->accessible_type}";
+
         return [
-            'temp_access_key' => encrypt("{$this->uuid}-tempo-{$this->accessible_id}::{$this->accessible_type}"),
+            'temp_access_key' => encrypt($publicKey),
             'expires_at' => $this->expires_at->timestamp
         ];
     }

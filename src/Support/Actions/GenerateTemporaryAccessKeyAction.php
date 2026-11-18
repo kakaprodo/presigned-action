@@ -14,43 +14,51 @@ class GenerateTemporaryAccessKeyAction extends CustomActionBuilder
 {
     public function handle(GenerateTemporaryAccessKeyData $data): TemporaryAccessKey
     {
-        $accessibleId = $data->accessible->getKey();
-        $accessibleClass = get_class($data->accessible);
-        $expireAfterMinutes = config('presigned-action.key_expires_after', 3600);
+        $accessibleId = $data->accessible?->getKey();
+        $accessibleClass = $data->accessible ? get_class($data->accessible) : null;
+        $isIndependent = $data->accessible === null;
+        $expireAfterMinutes = config('presigned-action.key_expires_after', 30);
 
         $accessKey = TemporaryAccessKey::query()
-            ->where('accessible_id', $accessibleId)
-            ->where('accessible_type', $accessibleClass)
-            ->where('whoami', $data->whoami)
+            ->where('is_independent', $isIndependent)
+            ->when(
+                $isIndependent,
+                fn($query) => $query->whereNull('accessible_id')->whereNull('accessible_type'),
+                fn($query) => $query->where('accessible_id', $accessibleId)->where('accessible_type', $accessibleClass)
+            )
+            ->where('expires_at', '>', now())
+            ->where('reference_text', $data->dataKey())
             ->first();
 
-        if (
-            $accessKey
-            && $accessKey?->expires_at?->isFuture()
-            && $accessKey?->expires_at?->isAfter(now()->addMinutes($expireAfterMinutes / 4))
-        ) {
-            return $accessKey;
-        }
-
-        $uuid = ((string) Str::uuid7()) . '' . $accessibleId;
-
-        // When access key is expired , update its uuid, then extends its validity period
         if ($accessKey) {
+            if ($accessKey->expires_at?->isFuture()) {
+                return $accessKey;
+            }
+
+            $uuid = (string) Str::uuid() . (string) ($accessibleId ?? '');
+
             $accessKey->update([
-                'uuid' => $uuid,
-                'expires_at' => $data->expires_at,
+                'uuid' => $uuid, // we always change the uuid because is part of the dynamic key to return in response of access key and we want it to always change
+                'expires_at' => $data->expires_at ?? now()->addMinutes($expireAfterMinutes)
             ]);
 
             return $accessKey->refresh();
         }
 
+        $uuid = (string) Str::uuid() . (string) ($accessibleId ?? '');
+
         return TemporaryAccessKey::create([
             'uuid' => $uuid,
+            'reference_text' => $data->dataKey(),
             'whoami' => $data->whoami,
             'expires_at' => $data->expires_at ?? now()->addMinutes($expireAfterMinutes),
             'accessible_id' => $accessibleId,
             'accessible_type' => $accessibleClass,
-            'settings' => $data->settings
+            'is_independent' => $isIndependent,
+            'settings' => $data->settings,
+            'scopes' => $data->scopes,
+            'permissions' => $data->permissions,
+            'origin' => $data->origin,
         ]);
     }
 }
