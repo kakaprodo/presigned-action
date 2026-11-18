@@ -11,17 +11,15 @@ if (($routeConfig['middleware'] ?? []) !== []) {
     $route->middleware($routeConfig['middleware']);
 }
 
-if (config('presigned-action.temp_auth_code.rate_limit.enabled', true)) {
-    $route->middleware('throttle:presigned-action-temp-auth-code');
-}
-
-$route->post($routeConfig['generate_uri'] ?? 'temp-auth-codes', function (Request $request) {
+$generationRoute = $route->post($routeConfig['generate_uri'] ?? 'temp-auth-codes', function (Request $request) {
     $validated = $request->validate([
         'state_key' => ['required', 'string', 'max:500'],
+        'metadata' => ['sometimes', 'array'],
     ]);
 
     $code = app(PresignedActionGate::class)->generateTempAuthCode([
         'state_key' => $validated['state_key'],
+        'metadata' => $validated['metadata'] ?? [],
     ]);
 
     return response()->json([
@@ -30,3 +28,23 @@ $route->post($routeConfig['generate_uri'] ?? 'temp-auth-codes', function (Reques
         'expires_at' => $code->expires_at->timestamp,
     ], 201);
 });
+
+if (config('presigned-action.temp_auth_code.rate_limit.enabled', true)) {
+    $generationRoute->middleware('throttle:presigned-action-temp-auth-code');
+}
+
+$fetchRoute = $route->get(
+    $routeConfig['fetch_uri'] ?? 'temp-auth-codes/{state_key}/{uuid}',
+    function (string $state_key, string $uuid) {
+        $result = app(PresignedActionGate::class)->fetchTempAuthCode($state_key, $uuid);
+
+        return response()->json(
+            $result,
+            $result['status'] === 'pending' ? 202 : 200
+        );
+    }
+);
+
+if (config('presigned-action.temp_auth_code.rate_limit.enabled', true)) {
+    $fetchRoute->middleware('throttle:presigned-action-temp-auth-code');
+}

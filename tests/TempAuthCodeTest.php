@@ -44,6 +44,32 @@ class TempAuthCodeTest extends TestCase
         $this->assertSame(['access_token' => 'token-1'], $updated->metadata);
     }
 
+    public function test_it_merges_generation_metadata_with_subscriber_metadata(): void
+    {
+        $code = PresignedAction::generateTempAuthCode([
+            'state_key' => 'metadata-merge-state',
+            'metadata' => [
+                'origin' => 'kitchen',
+                'shared' => 'generation',
+            ],
+        ]);
+
+        $updated = PresignedAction::associateTempAuthCode([
+            'uuid' => $code->uuid,
+            'subscriber_type' => 'subscriber',
+            'metadata' => [
+                'shared' => 'subscriber',
+                'subscriber_id' => 'subscriber-1',
+            ],
+        ]);
+
+        $this->assertSame([
+            'origin' => 'kitchen',
+            'shared' => 'subscriber',
+            'subscriber_id' => 'subscriber-1',
+        ], $updated->metadata);
+    }
+
     public function test_fetching_a_pending_code_does_not_consume_it(): void
     {
         $code = PresignedAction::generateTempAuthCode(['state_key' => 'state-pending']);

@@ -35,7 +35,7 @@ class PresignedActionGate
     /**
      * Generate a temporary authentication code.
      *
-     * @param array{state_key: string} $options
+     * @param array{state_key: string, metadata?: array<string, mixed>} $options
      */
     public function generateTempAuthCode(array $options): TempAuthCode
     {
