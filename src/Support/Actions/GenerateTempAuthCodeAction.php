@@ -15,6 +15,7 @@ class GenerateTempAuthCodeAction extends CustomActionBuilder
         return TempAuthCode::create([
             'uuid' => $data->generateUniqueCode(),
             'state_key' => $data->state_key,
+            'metadata' => $data->metadata ?? [],
             'expires_at' => now()->addSeconds((int) config('presigned-action.temp_auth_code.expires_after', 20)),
         ]);
     }

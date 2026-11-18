@@ -185,6 +185,15 @@ Content-Type: application/json
 {"state_key":"unique-login-request-state"}
 ```
 
+The request may also include optional metadata:
+
+```json
+{
+    "state_key": "unique-login-request-state",
+    "metadata": {"origin": "kitchen"}
+}
+```
+
 The response contains a generated UUID, the state key, and an expiration
 timestamp. Only the UUID should be placed in the QR code. The generating
 application keeps the state key and uses both values when polling.
@@ -213,8 +222,8 @@ Before association, the result has `status: pending`. Once associated, it
 returns `status: completed`, the subscriber information, and `metadata`, then
 deletes the code. Invalid, expired, or already-consumed codes return an error.
 
-Generation allows 20 requests per 60-second window per requester IP by
-default. The route, expiration, rate limit, and table name are configurable:
+Generation and fetch requests allow 20 requests per 60-second window per
+requester IP by default. The route, expiration, rate limit, and table name are configurable:
 
 ```php
 'temp_auth_code' => [
@@ -224,6 +233,7 @@ default. The route, expiration, rate limit, and table name are configurable:
         'enabled' => true,
         'prefix' => 'api/presigned-action',
         'generate_uri' => 'temp-auth-codes',
+        'fetch_uri' => 'temp-auth-codes/{state_key}/{uuid}',
         'middleware' => [],
     ],
     'rate_limit' => [

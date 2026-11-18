@@ -20,7 +20,7 @@ use Kakaprodo\PresignedAction\PresignedActionGate;
  *     is_independent?: bool,
  * } $options) Generate or reuse a temporary access key.
  * @method static ?TemporaryAccessKey temporaryAccessKey() Return the access key loaded by request middleware.
- * @method static TempAuthCode generateTempAuthCode(array{state_key: string} $options) Generate a short-lived temporary authentication code.
+ * @method static TempAuthCode generateTempAuthCode(array{state_key: string, metadata?: array<string, mixed>} $options) Generate a short-lived temporary authentication code.
  * @method static TempAuthCode associateTempAuthCode(array{
  *     uuid: string,
  *     subscriber_id?: string|null,
