@@ -35,6 +35,19 @@ abstract class TestCase extends BaseTestCase
                     'temp_access_key' => 'X-TEMP-ACCESS-KEY',
                 ],
                 'validation_error_message' => 'Unauthorized - invalid temporary access key',
+                'temp_auth_code' => [
+                    'table' => 'temp_auth_codes',
+                    'expires_after' => 20,
+                    'route' => [
+                        'enabled' => false,
+                        'prefix' => 'api/presigned-action',
+                    ],
+                    'rate_limit' => [
+                        'enabled' => true,
+                        'max_attempts' => 20,
+                        'window_seconds' => 60,
+                    ],
+                ],
             ],
         ]));
         $container->instance('encrypter', new Encrypter(str_repeat('a', 32), 'AES-256-CBC'));
@@ -65,6 +78,16 @@ abstract class TestCase extends BaseTestCase
             $table->json('scopes')->nullable();
             $table->json('permissions')->nullable();
             $table->string('origin')->nullable();
+            $table->timestamps();
+        });
+        $schema->create('temp_auth_codes', function ($table): void {
+            $table->id();
+            $table->uuid('uuid')->unique();
+            $table->string('state_key')->unique();
+            $table->string('subscriber_id')->nullable();
+            $table->string('subscriber_type')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamp('expires_at');
             $table->timestamps();
         });
     }

@@ -5,6 +5,7 @@ namespace Tests;
 use Illuminate\Database\Eloquent\Model;
 use Kakaprodo\PresignedAction\Console\GenerateTemporaryAccessKeyCommand;
 use Kakaprodo\PresignedAction\Console\PurgeExpiredTemporaryAccessKeysCommand;
+use Kakaprodo\PresignedAction\Models\TempAuthCode;
 use Kakaprodo\PresignedAction\Models\TemporaryAccessKey;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -50,6 +51,12 @@ class GenerateTemporaryAccessKeyCommandTest extends TestCase
             'uuid' => 'valid-key', 'whoami' => 'staff-1', 'expires_at' => now()->addMinute(),
             'accessible_id' => 1, 'accessible_type' => CommandAccessibleModel::class,
         ]);
+        TempAuthCode::create([
+            'uuid' => 'expired-code', 'state_key' => 'expired-state', 'expires_at' => now()->subMinute(),
+        ]);
+        TempAuthCode::create([
+            'uuid' => 'valid-code', 'state_key' => 'valid-state', 'expires_at' => now()->addMinute(),
+        ]);
 
         $command = new PurgeExpiredTemporaryAccessKeysCommand();
         $command->setLaravel(app());
@@ -57,7 +64,11 @@ class GenerateTemporaryAccessKeyCommandTest extends TestCase
 
         $this->assertSame(0, $tester->execute([]));
         $this->assertSame(1, TemporaryAccessKey::query()->count());
-        $this->assertStringContainsString('Purged 1', $tester->getDisplay());
+        $this->assertSame(1, TempAuthCode::query()->count());
+        $this->assertStringContainsString(
+            'Purged 1 expired temporary access key(s) and 1 temporary authentication code(s)',
+            $tester->getDisplay()
+        );
     }
 }
 
