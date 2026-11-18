@@ -41,6 +41,8 @@ abstract class TestCase extends BaseTestCase
                     'route' => [
                         'enabled' => false,
                         'prefix' => 'api/presigned-action',
+                        'generate_uri' => 'temp-auth-codes',
+                        'fetch_uri' => 'temp-auth-codes/{state_key}/{uuid}',
                     ],
                     'rate_limit' => [
                         'enabled' => true,

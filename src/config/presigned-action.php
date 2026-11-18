@@ -38,6 +38,7 @@ return [
             'enabled' => true,
             'prefix' => 'api/presigned-action',
             'generate_uri' => 'temp-auth-codes',
+            'fetch_uri' => 'temp-auth-codes/{state_key}/{uuid}',
             'middleware' => [],
         ],
         'rate_limit' => [

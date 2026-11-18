@@ -44,7 +44,13 @@ class TempAuthCodeRouteTest extends TestCase
                 throw new \InvalidArgumentException('The state_key may not be greater than 500 characters.');
             }
 
-            return ['state_key' => $stateKey];
+            $metadata = $this->input('metadata', []);
+
+            if (! is_array($metadata)) {
+                throw new \InvalidArgumentException('The metadata field must be an array.');
+            }
+
+            return ['state_key' => $stateKey, 'metadata' => $metadata];
         });
 
         require dirname(__DIR__) . '/src/routes/api.php';
@@ -55,7 +61,10 @@ class TempAuthCodeRouteTest extends TestCase
         $request = Request::create(
             '/api/presigned-action/temp-auth-codes',
             'POST',
-            ['state_key' => 'request-route-state']
+            [
+                'state_key' => 'request-route-state',
+                'metadata' => ['origin' => 'kitchen'],
+            ]
         );
 
         app()->instance('request', $request);
@@ -67,7 +76,10 @@ class TempAuthCodeRouteTest extends TestCase
         $this->assertSame('request-route-state', $payload['state_key']);
         $this->assertNotEmpty($payload['uuid']);
         $this->assertArrayHasKey('expires_at', $payload);
-        $this->assertTrue(TempAuthCode::query()->where('uuid', $payload['uuid'])->exists());
+        $this->assertSame(
+            ['origin' => 'kitchen'],
+            TempAuthCode::query()->where('uuid', $payload['uuid'])->first()->metadata
+        );
     }
 
     public function test_it_rejects_a_request_without_a_string_state_key(): void
@@ -98,5 +110,53 @@ class TempAuthCodeRouteTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
 
         app('router')->dispatch($request);
+    }
+
+    public function test_it_pulls_a_pending_temp_auth_code_through_the_configured_route(): void
+    {
+        $code = $this->generateCode('route-pending-state');
+        $request = Request::create(
+            "/api/presigned-action/temp-auth-codes/{$code->state_key}/{$code->uuid}",
+            'GET'
+        );
+
+        app()->instance('request', $request);
+        app()->instance(Request::class, $request);
+        $response = app('router')->dispatch($request);
+        $payload = $response->getData(true);
+
+        $this->assertSame(202, $response->getStatusCode());
+        $this->assertSame('pending', $payload['status']);
+    }
+
+    public function test_it_pulls_and_consumes_a_completed_temp_auth_code_through_the_route(): void
+    {
+        $code = $this->generateCode('route-completed-state');
+        \Kakaprodo\PresignedAction\Facades\PresignedAction::associateTempAuthCode([
+            'uuid' => $code->uuid,
+            'subscriber_type' => 'subscriber',
+            'metadata' => ['token' => 'route-token'],
+        ]);
+        $request = Request::create(
+            "/api/presigned-action/temp-auth-codes/{$code->state_key}/{$code->uuid}",
+            'GET'
+        );
+
+        app()->instance('request', $request);
+        app()->instance(Request::class, $request);
+        $response = app('router')->dispatch($request);
+        $payload = $response->getData(true);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('completed', $payload['status']);
+        $this->assertSame(['token' => 'route-token'], $payload['metadata']);
+        $this->assertFalse(TempAuthCode::query()->where('uuid', $code->uuid)->exists());
+    }
+
+    private function generateCode(string $stateKey): TempAuthCode
+    {
+        return \Kakaprodo\PresignedAction\Facades\PresignedAction::generateTempAuthCode([
+            'state_key' => $stateKey,
+        ]);
     }
 }

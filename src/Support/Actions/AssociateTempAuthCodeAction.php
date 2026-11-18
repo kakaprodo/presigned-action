@@ -17,7 +17,7 @@ class AssociateTempAuthCodeAction extends CustomActionBuilder
         $code->update([
             'subscriber_id' => $data->subscriber_id,
             'subscriber_type' => $data->subscriber_type,
-            'metadata' => $data->metadata ?? [],
+            'metadata' => array_merge($code->metadata ?? [], $data->metadata ?? []),
         ]);
 
         return $code->refresh();
