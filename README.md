@@ -167,6 +167,77 @@ Remove expired keys with:
 php artisan presigned-action:purge-expired
 ```
 
+The command removes both expired temporary access keys and expired temporary
+authentication codes.
+
+## Temporary authentication codes
+
+Temporary authentication codes support short-lived QR-code authentication
+between applications. The default lifetime is 20 seconds, and each code can
+be consumed only once after subscriber information is attached.
+
+The package exposes an unauthenticated generation route:
+
+```http
+POST /api/presigned-action/temp-auth-codes
+Content-Type: application/json
+
+{"state_key":"unique-login-request-state"}
+```
+
+The response contains a generated UUID, the state key, and an expiration
+timestamp. Only the UUID should be placed in the QR code. The generating
+application keeps the state key and uses both values when polling.
+
+After scanning, associate subscriber data through the gate. No association
+route is provided by the package:
+
+```php
+PresignedAction::associateTempAuthCode([
+    'uuid' => $uuid,
+    'subscriber_id' => 'subscriber-42',
+    'subscriber_type' => 'subscriber',
+    'metadata' => [
+        'access_token' => $token,
+    ],
+]);
+```
+
+Fetch the result with the original state key and QR-code UUID:
+
+```php
+$result = PresignedAction::fetchTempAuthCode($stateKey, $uuid);
+```
+
+Before association, the result has `status: pending`. Once associated, it
+returns `status: completed`, the subscriber information, and `metadata`, then
+deletes the code. Invalid, expired, or already-consumed codes return an error.
+
+Generation allows 20 requests per 60-second window per requester IP by
+default. The route, expiration, rate limit, and table name are configurable:
+
+```php
+'temp_auth_code' => [
+    'table' => 'temp_auth_codes',
+    'expires_after' => 20,
+    'route' => [
+        'enabled' => true,
+        'prefix' => 'api/presigned-action',
+        'generate_uri' => 'temp-auth-codes',
+        'middleware' => [],
+    ],
+    'rate_limit' => [
+        'enabled' => true,
+        'max_attempts' => 20,
+        'window_seconds' => 60,
+        'key_resolver' => null,
+    ],
+],
+```
+
+Set `temp_auth_code.table` to use a different database table name. The model
+and package migration use the same setting.
+
 ## Custom validators
 
 Validators can be registered from any service provider and are called with the
@@ -212,6 +283,10 @@ return [
     'access_key_validation' => [
         'whoami' => 'X-WHOMAI',
         'temp_access_key' => 'X-TEMP-ACCESS-KEY',
+    ],
+    'temp_auth_code' => [
+        'table' => 'temp_auth_codes',
+        'expires_after' => 20,
     ],
 ];
 ```

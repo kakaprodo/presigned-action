@@ -28,5 +28,23 @@ return [
     /**
      * Error messages returned when access key validation fails.
      */
-    'validation_error_message' => 'Unauthorized - invalid temporary access key'
+    'validation_error_message' => 'Unauthorized - invalid temporary access key',
+
+    'temp_auth_code' => [
+        /** Database table used for temporary authentication codes. */
+        'table' => 'temp_auth_codes',
+        'expires_after' => 20,
+        'route' => [
+            'enabled' => true,
+            'prefix' => 'api/presigned-action',
+            'generate_uri' => 'temp-auth-codes',
+            'middleware' => [],
+        ],
+        'rate_limit' => [
+            'enabled' => true,
+            'max_attempts' => 20,
+            'window_seconds' => 60,
+            'key_resolver' => null,
+        ],
+    ],
 ];
